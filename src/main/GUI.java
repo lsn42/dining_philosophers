@@ -1,20 +1,29 @@
 package main;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+
+import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JTextArea;
-import javax.swing.BorderFactory;
 
-import java.awt.GridBagLayout;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
+import java.util.HashSet;
 
-public class GUI extends JFrame implements Listener {
+public class GUI extends JFrame implements Source, Listener {
 
     private static final long serialVersionUID = 1L;
+
+    public static final String AUTHOR = "lsn42";
 
     public static final ImageIcon CHOPSTICKS = new ImageIcon("resource/36px-chopsticks.png");
     public static final ImageIcon CHOPSTICK = new ImageIcon("resource/36px-chopstick.png");
@@ -29,14 +38,24 @@ public class GUI extends JFrame implements Listener {
     public static final ImageIcon PLATE = new ImageIcon("resource/plate.png");
     public static final ImageIcon DESK = new ImageIcon("resource/desk.png");
 
-    public static final String NORMAL = "哲学家进餐问题：\n    有5位哲学家，他们每天的生活就是思考和进餐。他们围坐在一张桌子旁，桌子上有无限供应的火锅，但是只有五支筷子。哲学家进餐时，会先后拿起自己右边和左边的筷子。但是这样可能发生每个哲学家都拿起了自己右边的筷子，却又都在等待自己左边的筷子的情况，没有任何一个哲学家可以吃到东西。";
-    public static final String IMPROVED = "哲学家进餐问题（改进版）：\n    有5位哲学家，他们每天的生活就是思考和进餐。他们围坐在一张桌子旁，桌子上有无限供应的火锅，但是只有五支筷子。哲学家进餐时，会先后拿起自己右边和左边的筷子。但是这样可能发生每个哲学家都拿起了自己左边的筷子，却又都在等待自己右边的筷子的情况，没有任何一个哲学家可以吃到东西。\n    解决方法：安排其中一位哲学家先拿起自己左边的筷子，阻止循环等待的发生。";
+    public static final String NORMAL = "哲学家进餐问题：\n    有5位哲学家，他们每天的生活就是思考和进餐。他们围坐在一张桌子旁，桌子上有无限供应的火锅，但只有五支筷子。哲学家进餐时，会先后拿起自己右边和左边的筷子。但是这样可能发生死锁，即每个哲学家都拿起了自己右边的筷子，却又都在等待自己左边的筷子，哲学家们都不能吃到东西。（将速度调到最大会很快出现这种情况！）";
+    public static final String IMPROVED = "哲学家进餐问题（改进版）：\n    有5位哲学家，他们每天的生活就是思考和进餐。他们围坐在一张桌子旁，桌子上有无限供应的火锅，但只有五支筷子。哲学家进餐时，会先后拿起自己右边和左边的筷子。但是这样可能发生死锁，即每个哲学家都拿起了自己左边的筷子，却又都在等待自己右边的筷子，哲学家们都不能吃到东西。\n    解决方法：安排其中一位哲学家先拿起自己左边的筷子，阻止循环等待的发生。";
 
     public JPanel mainPanel;
-    public JTextArea infomation;
+    public JPanel infoPanel;
     public JPanel ctrlPanel;
-    public JButton mode0;
-    public JButton mode1;
+
+    public JTextArea author;
+    public JTextArea information;
+    public JLabel eaten;
+    public JPanel caption;
+
+    public JScrollBar speed;
+    public JLabel labelSpeed;
+    public JButton buttonResetSpeed;
+    public JButton buttonRestart;
+    public JButton buttonMode0;
+    public JButton buttonMode1;
 
     public JPanel[] panelPhilosopher;
     public JLabel[] pictureChopstickGot;
@@ -52,8 +71,9 @@ public class GUI extends JFrame implements Listener {
     public JLabel pictureDesk;
     public JLabel pictureHotpot;
 
-    public GUI() {
+    public HashSet<Listener> listeners;
 
+    public GUI(int mode) {
         GridBagLayout gbl = new GridBagLayout();
         GridBagConstraints gbc = new GridBagConstraints();
 
@@ -65,16 +85,30 @@ public class GUI extends JFrame implements Listener {
 
         this.mainPanel = new JPanel();
         this.mainPanel.setLayout(gbl);
-        this.infomation = new JTextArea();
-        this.infomation.setLineWrap(true);
-        this.infomation.setEditable(false);
-        this.infomation.setFont(new Font("微软雅黑", Font.BOLD, 16));
-        this.infomation.setText(GUI.NORMAL);
-        this.infomation.setBorder(BorderFactory.createEtchedBorder());
+
+        this.infoPanel = new JPanel();
+        this.infoPanel.setLayout(gbl);
+        this.infoPanel.setBorder(BorderFactory.createEtchedBorder());
+
+        this.author = new JTextArea(GUI.AUTHOR);
+        this.author.setBorder(BorderFactory.createEtchedBorder());
+        this.information = new JTextArea();
+        this.information.setBorder(BorderFactory.createEtchedBorder());
+        this.eaten = new JLabel();
+        this.caption = new JPanel();
+        this.caption.setLayout(gbl);
+        this.caption.setBorder(BorderFactory.createEtchedBorder());
+
         this.ctrlPanel = new JPanel();
+        this.ctrlPanel.setLayout(gbl);
         this.ctrlPanel.setBorder(BorderFactory.createEtchedBorder());
-        this.mode0 = new JButton("普通模式");
-        this.mode1 = new JButton("改进模式");
+
+        this.speed = new JScrollBar(JScrollBar.HORIZONTAL, 128, 0, 1, 256);
+        this.labelSpeed = new JLabel("速度：");
+        this.buttonResetSpeed = new JButton("重置");
+        this.buttonRestart = new JButton("重新开始");
+        this.buttonMode0 = new JButton("普通模式");
+        this.buttonMode1 = new JButton("改进模式");
 
         this.panelPhilosopher = new JPanel[5];
         this.pictureChopstickGot = new JLabel[5];
@@ -87,7 +121,12 @@ public class GUI extends JFrame implements Listener {
         this.labelChopstick = new JLabel[5];
 
         this.picturePlate = new JLabel[5];
+        this.pictureDesk = new JLabel();
+        this.pictureHotpot = new JLabel();
 
+        this.listeners = new HashSet<Listener>();
+
+        // initializing 5 philosophers, chopsticks and plates
         for (int i = 0; i < 5; ++i) {
             this.panelPhilosopher[i] = new JPanel();
             this.panelPhilosopher[i].setLayout(gbl);
@@ -137,12 +176,11 @@ public class GUI extends JFrame implements Listener {
             this.picturePlate[i].setIcon(GUI.PLATE);
         }
 
-        this.pictureDesk = new JLabel();
-        this.pictureHotpot = new JLabel();
+        // initializing desk and hotpot
         this.pictureDesk.setIcon(GUI.DESK);
         this.pictureHotpot.setIcon(GUI.HOTPOT);
         
-        // add 5 philosophers
+        // adding 5 philosophers to mainPanel
         gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.gridx = 2;
@@ -162,7 +200,7 @@ public class GUI extends JFrame implements Listener {
         gbc.gridy = 1;
         this.mainPanel.add(this.panelPhilosopher[4], gbc);
 
-        // desk and hotpot
+        // adding desk and hotpot to mainPanel
         gbc.gridx = 1;
         gbc.gridy = 1;
         gbc.gridwidth = 3;
@@ -174,7 +212,7 @@ public class GUI extends JFrame implements Listener {
         gbc.gridheight = 1;
         this.mainPanel.add(this.pictureHotpot, gbc);
 
-        // plate part 1
+        // adding plate0, 1, 4 to mainPanel
         gbc.gridx = 2;
         gbc.gridy = 1;
         this.mainPanel.add(this.picturePlate[0], gbc);
@@ -185,7 +223,7 @@ public class GUI extends JFrame implements Listener {
         gbc.gridx = 1;
         this.mainPanel.add(this.picturePlate[4], gbc);
 
-        // chopsticks
+        // adding chopsticks0, 1, 2, 4 to mainPanel
         gbc.anchor = GridBagConstraints.SOUTHEAST;
         gbc.gridx = 1;
         gbc.gridy = 1;
@@ -199,20 +237,20 @@ public class GUI extends JFrame implements Listener {
         gbc.gridx = 1;
         this.mainPanel.add(this.panelChopstick[4], gbc);
 
+        // adding chopstick3 and plate2, 3 to container
         JPanel container = new JPanel();
         container.setLayout(gbl);
         gbc.gridx = 1;
         gbc.gridy = 0;
         container.add(this.panelChopstick[3], gbc);
 
-        // plate part 2
         gbc.anchor = GridBagConstraints.NORTH;
         gbc.gridx = 0;
         container.add(this.picturePlate[3], gbc);
         gbc.gridx = 2;
         container.add(this.picturePlate[2], gbc);
 
-        // container
+        // addding container to mainPanel
         gbc.fill = GridBagConstraints.VERTICAL;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.gridx = 1;
@@ -221,25 +259,168 @@ public class GUI extends JFrame implements Listener {
         gbc.gridheight = 1;
         this.mainPanel.add(container, gbc);
         
-        this.ctrlPanel.add(this.mode0);
-        this.ctrlPanel.add(this.mode1);
+        // configuring author bar and information bar
+        this.author.setLineWrap(true);
+        this.author.setEditable(false);
+        this.author.setFont(new Font("宋体", Font.PLAIN, 12));
+        this.information.setLineWrap(true);
+        this.information.setEditable(false);
+        this.information.setFont(new Font("微软雅黑", Font.BOLD, 13));
+        if (mode == 0) {
+            this.information.setText(GUI.NORMAL);
+        } else if (mode == 1) {
+            this.information.setText(GUI.IMPROVED);
+        }
 
-        gbc.fill = GridBagConstraints.VERTICAL;
+        // initializing cations
+        JLabel captionPicture1 = new JLabel(GUI.THINKING);
+        JLabel captionPicture2 = new JLabel(GUI.EATING);
+        JLabel captionPicture3 = new JLabel(GUI.WAITING);
+        JLabel captionText1 = new JLabel("思考");
+        JLabel captionText2 = new JLabel("进餐");
+        JLabel captionText3 = new JLabel("等待");
+
+        // adding captions to caption panel
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 1;
+        gbc.gridheight = 1;
+        this.caption.add(captionPicture1, gbc);
+        gbc.gridx = 1;
+        this.caption.add(captionText1, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        this.caption.add(captionPicture2, gbc);
+        gbc.gridx = 1;
+        this.caption.add(captionText2, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        this.caption.add(captionPicture3, gbc);
+        gbc.gridx = 1;
+        this.caption.add(captionText3, gbc);
+
+        // adding many information to information panel
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.NORTH;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 1;
+        gbc.gridheight = 1;
+        this.infoPanel.add(this.author, gbc);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        this.infoPanel.add(this.information, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        this.infoPanel.add(this.eaten, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        this.infoPanel.add(this.caption, gbc);
+
+        // configuring the listener of scroll bar and buttons
+        this.speed.addAdjustmentListener(new AdjustmentListener() {
+            @Override
+            public void adjustmentValueChanged(AdjustmentEvent e) {
+                GUI.this.notifyAll(new Event(GUI.this, "speed", GUI.this.speed.getValue()+""));
+            }
+        });
+        this.buttonResetSpeed.addActionListener(new ButtonListener());
+        this.buttonRestart.addActionListener(new ButtonListener());
+        this.buttonMode0.addActionListener(new ButtonListener());
+        this.buttonMode1.addActionListener(new ButtonListener());
+
+        // adding scroll bar and speed reset button to container2
+        JPanel container2 = new JPanel();
+        container2.setLayout(gbl);
+        container2.setBorder(BorderFactory.createEtchedBorder());
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        container2.add(this.labelSpeed, gbc);
+        gbc.anchor = GridBagConstraints.EAST;
+        gbc.gridx = 1;
+        container2.add(this.buttonResetSpeed, gbc);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        gbc.gridheight = 1;
+        container2.add(this.speed, gbc);
+
+        // adding container2 and buttons to control panel
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 1;
+        gbc.gridheight = 1;
+        this.ctrlPanel.add(container2, gbc);
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.gridy = 2;
+        this.ctrlPanel.add(this.buttonRestart, gbc);
+        gbc.gridy = 3;
+        this.ctrlPanel.add(this.buttonMode0, gbc);
+        gbc.gridy = 4;
+        this.ctrlPanel.add(this.buttonMode1, gbc);
+
+        // adding three parts to the main frame
+        gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 1;
         gbc.gridheight = 2;
         this.add(this.mainPanel, gbc);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.fill = GridBagConstraints.BOTH;
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.gridwidth = 1;
         gbc.gridheight = 1;
-        this.add(this.infomation, gbc);
+        this.add(this.infoPanel, gbc);
         gbc.gridx = 1;
         gbc.gridy = 1;
         this.add(this.ctrlPanel, gbc);
+    }
+
+    public GUI() {
+        this(0);
+    }
+
+    public void setEaten(int eaten) {
+        this.eaten.setText("哲学家们一共吃了 "+eaten+" 份火锅！");
+    }
+
+    public void reset() {
+        for (int i = 0; i < 5; ++i) {
+            this.pictureChopstickGot[i].setIcon(GUI.NOTHING);
+            this.picturePhilosopher[i].setIcon(GUI.NOTHING);
+            this.pictureDialog[i].setIcon(GUI.NODIALOG);
+            this.pictureChopstick[i].setIcon(GUI.CHOPSTICK);
+        }
+    }
+
+    public class ButtonListener implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            String command = e.getActionCommand();
+            if (command.equals("重置")) {
+                GUI.this.speed.setValue(128);
+                GUI.this.notifyAll(new Event(GUI.this, "speed", "128"));
+            }
+            else if (command.equals("重新开始")) {
+                GUI.this.notifyAll(new Event(GUI.this, "restart"));
+            } else if (command.equals("改进模式")) {
+                GUI.this.notifyAll(new Event(GUI.this, "mode", "1"));
+                GUI.this.information.setText(GUI.IMPROVED);
+            } else if (command.equals("普通模式")) {
+                GUI.this.notifyAll(new Event(GUI.this, "mode", "0"));
+                GUI.this.information.setText(GUI.NORMAL);
+            }
+        }
     }
 
     @Override
@@ -291,6 +472,23 @@ public class GUI extends JFrame implements Listener {
                     this.pictureDialog[index].setIcon(GUI.NODIALOG);
                 } 
             }
+        }
+    }
+
+    @Override
+    public void addListener(Listener l) {
+        this.listeners.add(l);
+    }
+
+    @Override
+    public void removeListener(Listener l) {
+        this.listeners.remove(l);
+    }
+
+    @Override
+    public void notifyAll(Event e) {
+        for (Listener l: this.listeners) {
+            l.actionPerformed(e);
         }
     }
 }

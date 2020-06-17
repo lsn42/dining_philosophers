@@ -5,17 +5,28 @@ import java.util.HashSet;
 public class Philosopher extends Thread implements Source {
 
     public String status;
-    public int eaten;
+    public boolean isEnd;
     public int index;
-    public Chopstick chopstick1;
-    public Chopstick chopstick2;
+    public int eaten;
+    public int interval;
+    public Chopstick rightChopstick;
+    public Chopstick leftChopstick;
 
     public HashSet<Listener> listeners;
+
+    public Philosopher(int index) {
+        this.status = "thinking";
+        this.isEnd = false;
+        this.index = index;
+        this.eaten = 0;
+        this.interval = 2560;
+        this.listeners = new HashSet<Listener>();
+    }
 
     public void eat() {
         this.paintStatus("eating");
         try {
-            Thread.sleep(500+(int)(Math.random()*500));
+            Thread.sleep((int)(Math.random()*this.interval));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -25,40 +36,40 @@ public class Philosopher extends Thread implements Source {
     public void think() {
         this.paintStatus("thinking");
         try {
-            Thread.sleep(1000+(int)(Math.random()*500));
+            Thread.sleep((int)(Math.random()*this.interval*2));
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public Philosopher(int index) {
-        this.listeners = new HashSet<Listener>();
-        this.status = "thinking";
-        this.eaten = 0;
-        this.index = index;
-    }
-
     @Override
     public void run() {
         try {
-            while (true) {
+            while (!isEnd) {
                 this.think();
                 this.paintStatus("waiting");
                 this.paintDialog("both");
-                this.chopstick1.acquire();
+                this.rightChopstick.acquire();
                 this.paintChopstick("pick", "right");
                 this.paintDialog("left");
-                this.chopstick2.acquire();
+                this.leftChopstick.acquire();
                 this.paintChopstick("pick", "left");
                 this.paintDialog("end");
                 this.eat();
-                this.chopstick1.release();
+                this.rightChopstick.release();
                 this.paintChopstick("release", "right");
-                this.chopstick2.release();
+                this.leftChopstick.release();
                 this.paintChopstick("release", "left");
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+    public void end() {
+        this.isEnd = true;
+        for (Listener l: this.listeners) {
+            this.removeListener(l);
         }
     }
 
