@@ -19,24 +19,29 @@ import javax.swing.JTextArea;
 
 import java.util.HashSet;
 
+import event.Event;
+import event.Listener;
+import event.Source;
+import object.Philosopher;
+
 public class GUI extends JFrame implements Source, Listener {
 
     private static final long serialVersionUID = 1L;
 
     public static final String AUTHOR = "lsn42";
 
-    public static final ImageIcon CHOPSTICKS = new ImageIcon("resource/36px-chopsticks.png");
-    public static final ImageIcon CHOPSTICK = new ImageIcon("resource/36px-chopstick.png");
-    public static final ImageIcon NOTHING = new ImageIcon("resource/36px-null.png");
-    public static final ImageIcon THINKING = new ImageIcon("resource/2018new_wenhao_org.png");
-    public static final ImageIcon WAITING = new ImageIcon("resource/2018new_beishang_org.png");
-    public static final ImageIcon EATING = new ImageIcon("resource/2018new_taikaixin_org.png");
-    public static final ImageIcon DIALOGRIGHT = new ImageIcon("resource/dialog-right.png");
-    public static final ImageIcon DIALOGLEFT = new ImageIcon("resource/dialog-left.png");
-    public static final ImageIcon NODIALOG = new ImageIcon("resource/dialog-null.png");
-    public static final ImageIcon HOTPOT = new ImageIcon("resource/hotpot.png");
-    public static final ImageIcon PLATE = new ImageIcon("resource/plate.png");
-    public static final ImageIcon DESK = new ImageIcon("resource/desk.png");
+    public static final ImageIcon CHOPSTICKS = new ImageIcon(Main.class.getResource("/resource/36px-chopsticks.png"));
+    public static final ImageIcon CHOPSTICK = new ImageIcon(Main.class.getResource("/resource/36px-chopstick.png"));
+    public static final ImageIcon NOTHING = new ImageIcon(Main.class.getResource("/resource/36px-null.png"));
+    public static final ImageIcon THINKING = new ImageIcon(Main.class.getResource("/resource/2018new_wenhao_org.png"));
+    public static final ImageIcon WAITING = new ImageIcon(Main.class.getResource("/resource/2018new_beishang_org.png"));
+    public static final ImageIcon EATING = new ImageIcon(Main.class.getResource("/resource/2018new_taikaixin_org.png"));
+    public static final ImageIcon DIALOGRIGHT = new ImageIcon(Main.class.getResource("/resource/dialog-right.png"));
+    public static final ImageIcon DIALOGLEFT = new ImageIcon(Main.class.getResource("/resource/dialog-left.png"));
+    public static final ImageIcon NODIALOG = new ImageIcon(Main.class.getResource("/resource/dialog-null.png"));
+    public static final ImageIcon HOTPOT = new ImageIcon(Main.class.getResource("/resource/hotpot.png"));
+    public static final ImageIcon PLATE = new ImageIcon(Main.class.getResource("/resource/plate.png"));
+    public static final ImageIcon DESK = new ImageIcon(Main.class.getResource("/resource/desk.png"));
 
     public static final String NORMAL = "哲学家进餐问题：\n    有5位哲学家，他们每天的生活就是思考和进餐。他们围坐在一张桌子旁，桌子上有无限供应的火锅，但只有五支筷子。哲学家进餐时，会先后拿起自己右边和左边的筷子。但是这样可能发生死锁，即每个哲学家都拿起了自己右边的筷子，却又都在等待自己左边的筷子，哲学家们都不能吃到东西。（将速度调到最大会很快出现这种情况！）";
     public static final String IMPROVED = "哲学家进餐问题（改进版）：\n    有5位哲学家，他们每天的生活就是思考和进餐。他们围坐在一张桌子旁，桌子上有无限供应的火锅，但只有五支筷子。哲学家进餐时，会先后拿起自己右边和左边的筷子。但是这样可能发生死锁，即每个哲学家都拿起了自己左边的筷子，却又都在等待自己右边的筷子，哲学家们都不能吃到东西。\n    解决方法：安排其中一位哲学家先拿起自己左边的筷子，阻止循环等待的发生。";
@@ -79,7 +84,7 @@ public class GUI extends JFrame implements Source, Listener {
 
         this.setLayout(gbl);
         this.setTitle("哲学家进餐");
-        this.setBounds(100, 100, 800, 600);
+        this.setBounds(100, 100, 900, 600);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setVisible(true);
 
@@ -104,7 +109,7 @@ public class GUI extends JFrame implements Source, Listener {
         this.ctrlPanel.setBorder(BorderFactory.createEtchedBorder());
 
         this.speed = new JScrollBar(JScrollBar.HORIZONTAL, 128, 0, 1, 256);
-        this.labelSpeed = new JLabel("速度：");
+        this.labelSpeed = new JLabel("速度：128");
         this.buttonResetSpeed = new JButton("重置");
         this.buttonRestart = new JButton("重新开始");
         this.buttonMode0 = new JButton("普通模式");
@@ -324,7 +329,9 @@ public class GUI extends JFrame implements Source, Listener {
         this.speed.addAdjustmentListener(new AdjustmentListener() {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
-                GUI.this.notifyAll(new Event(GUI.this, "speed", GUI.this.speed.getValue()+""));
+                int value = GUI.this.speed.getValue();
+                GUI.this.setSpeed(value);
+                GUI.this.notifyAll(new Event(GUI.this, "speed", value+""));
             }
         });
         this.buttonResetSpeed.addActionListener(new ButtonListener());
@@ -394,6 +401,10 @@ public class GUI extends JFrame implements Source, Listener {
         this.eaten.setText("哲学家们一共吃了 "+eaten+" 份火锅！");
     }
 
+    public void setSpeed(int speed) {
+        this.labelSpeed.setText("速度："+speed);
+    }
+
     public void reset() {
         for (int i = 0; i < 5; ++i) {
             this.pictureChopstickGot[i].setIcon(GUI.NOTHING);
@@ -409,6 +420,7 @@ public class GUI extends JFrame implements Source, Listener {
             String command = e.getActionCommand();
             if (command.equals("重置")) {
                 GUI.this.speed.setValue(128);
+                GUI.this.setSpeed(128);
                 GUI.this.notifyAll(new Event(GUI.this, "speed", "128"));
             }
             else if (command.equals("重新开始")) {

@@ -1,5 +1,11 @@
 package main;
 
+import event.Event;
+import event.Listener;
+import object.Chopstick;
+import object.LeftHandedPhilosopher;
+import object.Philosopher;
+
 public class Main {
 
     public int mode;

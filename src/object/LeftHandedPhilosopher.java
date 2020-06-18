@@ -1,4 +1,4 @@
-package main;
+package object;
 
 public class LeftHandedPhilosopher extends Philosopher {
 

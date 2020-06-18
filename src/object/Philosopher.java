@@ -1,6 +1,10 @@
-package main;
+package object;
 
 import java.util.HashSet;
+
+import event.Event;
+import event.Listener;
+import event.Source;
 
 public class Philosopher extends Thread implements Source {
 
